@@ -1,9 +1,5 @@
-
+import type { Coords } from "./types";
 /* scoring is based on the haversine distance between the pin and the target */
-export type Coords = {
-    lat: number
-    lon: number
-}
 
 
 export function haversineDistance(target_coords: Coords, pin_coords: Coords): number {

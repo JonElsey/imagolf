@@ -4,22 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import "./map/maplibre"
 import { haversineDistance, calculateScore } from "./game/scoring"
 import { Questions } from "./game/question"
-import type { Question } from "./game/question"
-
-type Area = {
-  data_zone_code: string
-  centroid_lat: number
-  centroid_lon: number
-  cloud_probability: number
-  num_acquisitions: number
-}
-
-type Result = {
-  score: number
-  distance: number
-  nearestTarget: Area
-}
-
+import type { Question, Area, Result } from "./game/types"
 
 // lots of inline styling - later this will become css 
 
@@ -36,7 +21,8 @@ function App() {
   const [question, setQuestion] = useState<Question | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0); // index of the current question
   const [started, setStarted] = useState(false); // whether the game has started
-
+  const [totalScore, setTotalScore] = useState(0); // total score for the game
+  const [showSummary, setShowSummary] = useState(false); // whether to show the summary message at the end of the game
 
   function handleReset() { 
     // need to set a bunch of things to null
@@ -47,6 +33,8 @@ function App() {
     setQuestionIndex(0);  // reset question index to 0
     setQuestion(null);
     setStarted(false);
+    setShowSummary(false);
+    setTotalScore(0); // reset total score to 0
   }
 
   function handleStart() {
@@ -54,6 +42,7 @@ function App() {
     setStarted(true);
     setQuestionIndex(0); // reset question index to 0
     setQuestion(Questions[0]);
+    setTotalScore(0); // reset total score to 0
   }
 
   function handleNextQuestion() {
@@ -90,7 +79,6 @@ function App() {
           nearestDistance = targetDistance;
           nearestTarget = target;
         }
-        console.log(`Distance to target ${target.data_zone_code}: ${targetDistance} km`);
       }
       // then calculate the score based on the distance to the closest target
       const score = calculateScore(nearestDistance);
@@ -100,7 +88,12 @@ function App() {
       }
       setTargetPin({ longitude: nearestTarget.centroid_lon, latitude: nearestTarget.centroid_lat });
       setResult({ score, distance: nearestDistance, nearestTarget });
+      setTotalScore(prev => prev + score); // add score to total score
       setLocked(true);
+  }
+
+  function handleShowSummary() {
+    setShowSummary(true);
   }
 
 
@@ -181,7 +174,7 @@ function App() {
       </Map>
 
       {/* Display results */}
-      {result && locked && (
+      {result && locked && !showSummary && question && (
         <div
           style={{
             position: "absolute",
@@ -196,17 +189,17 @@ function App() {
           }}
         >
           <h3>Results</h3>
-          <p>Target coordinates: {result.nearestTarget.centroid_lat}, {result.nearestTarget.centroid_lon}</p>
+          <p>Target coordinates: {result.nearestTarget.centroid_lat.toFixed(3)}, {result.nearestTarget.centroid_lon.toFixed(3)}</p>
           <p>Target data zone code: {result.nearestTarget.data_zone_code}</p>
-          <p>Cloud probability: {result.nearestTarget.cloud_probability}</p>
+          <p>Cloud probability: {(result.nearestTarget.cloud_probability.toFixed(2))}</p>
           <p>Number of acquisitions: {result.nearestTarget.num_acquisitions}</p>
-          <p>Distance from target: {Math.round(result.distance)} km</p>
+          <p>Distance from target: {(result.distance.toFixed(2))} km</p>
           <p>Score: {result.score}</p>
         </div>
       )}
 
       {/* Story */}
-      { result && locked &&
+      { result && locked && !showSummary && question &&
       <div
         style={{
           position: "absolute",
@@ -267,8 +260,43 @@ function App() {
         </button>
       )}
 
+      {/* Summary message that displays at the end of the game */}
+      {showSummary && (
+        <div
+          style={{
+            position: "absolute",
+            top: "20%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "white",
+            padding: "10px",
+            borderRadius: "5px",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          <p>Game over.</p>
+          <p>Final score: {totalScore}/{Questions.length * 1000}</p>
+          <p>Restart by pressing the Reset button.</p>
+        </div>
+      )}
 
-      {/* Reset button - restores game to initial state */}
+      {/* Show summary button - only visible at the end of the game */}
+      {locked && questionIndex === Questions.length - 1 && !showSummary && (
+        <button
+        onClick={handleShowSummary} 
+        style={{ position: "absolute", 
+          bottom: "80%",
+          left: "20%", 
+          transform: "translateX(-50%)",
+          fontSize: "24px" }}
+        >
+        Show summary
+        </button>
+      )
+      }
+
+      {/* Reset button - restores game to initial state. Always visible after first question has been answered */}
       {result && locked && started && (
         <button
         onClick={handleReset} 
