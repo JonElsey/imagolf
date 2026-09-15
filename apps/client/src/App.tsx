@@ -3,6 +3,8 @@ import Map, { Layer, Marker as Pin, Source } from "react-map-gl/maplibre"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "./map/maplibre"
 import { haversineDistance, calculateScore } from "./game/scoring"
+import { Questions } from "./game/question"
+import type { Question } from "./game/question"
 
 type Area = {
   data_zone_code: string
@@ -18,6 +20,7 @@ type Result = {
   nearestTarget: Area
 }
 
+
 // lots of inline styling - later this will become css 
 
 function App() { 
@@ -30,6 +33,9 @@ function App() {
   const [result, setResult] = useState<Result | null>(null);
   const [areas, setAreas] = useState<Area[]>([]); // array of areas loaded from JSON
   const [targets, setTargets] = useState<Area[]>([]); // array of targets loaded from JSON
+  const [question, setQuestion] = useState<Question | null>(null);
+  const [questionIndex, setQuestionIndex] = useState(0); // index of the current question
+  const [started, setStarted] = useState(false); // whether the game has started
 
 
   function handleReset() { 
@@ -38,7 +44,33 @@ function App() {
     setTargetPin(null);
     setLocked(false);
     setResult(null);
+    setQuestionIndex(0);  // reset question index to 0
+    setQuestion(null);
+    setStarted(false);
   }
+
+  function handleStart() {
+    // set the question to the first question in the array
+    setStarted(true);
+    setQuestionIndex(0); // reset question index to 0
+    setQuestion(Questions[0]);
+  }
+
+  function handleNextQuestion() {
+    // set the question to the next question in the array
+    const nextIndex = questionIndex + 1;
+    if (nextIndex < Questions.length) {
+      setQuestionIndex(nextIndex); // increment question index for next question
+      setQuestion(Questions[nextIndex]);
+      // reset pin and result for next question
+      setPin(null);
+      setTargetPin(null);
+      setLocked(false);
+      setResult(null);
+    } else {
+      console.log("No more questions");
+    }
+  } 
 
   function handleLockIn() {
     // store pin location in local storage and calculate score 
@@ -71,23 +103,31 @@ function App() {
       setLocked(true);
   }
 
-  useEffect(() => {
-    // Load saved data
-    fetch("/data/areas.json")
-    .then(res => res.json())
-    .then(data => {console.log("Loaded areas data", data[0])
-      setAreas(data)
-    })
-  }, []);
 
-  /* sort areas by cloud probability and log the top 5 */
+  // load the areas data from the JSON file when the question changes
   useEffect(() => {
-    if (areas.length > 0) {
-      const sortedAreas = [...areas].sort((a, b) => b.cloud_probability - a.cloud_probability);
-      console.log("Top 1 areas with highest cloud probability:", sortedAreas.slice(0, 1));
-      setTargets(sortedAreas.slice(0, 1)); // store top 25 targets in state
-    }
-  }, [areas]);  
+    if (!question) return; // if no question, do nothing
+    fetch(question.file)
+      .then(res => res.json())
+      .then(data => {
+        console.log("Loaded areas data for question", question.question, data[0])
+        setAreas(data)
+        const sortedAreas = [...data].sort((a: any, b: any) => {
+          if (question.statistic === "max") {
+            return (b as any)[question.variable] - (a as any)[question.variable];
+          }
+          else if (question.statistic === "min") {
+            return (a as any)[question.variable] - (b as any)[question.variable];
+          }
+          else {
+            console.error("Unknown statistic", question.statistic);
+            return 0;
+          }
+      })
+        setTargets(sortedAreas.slice(0, question.top_n)); // store top N targets in state
+    })
+  }, [question]);
+  
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -101,8 +141,16 @@ function App() {
         onClick={(e) => {if (!locked) setPin({ longitude: e.lngLat.lng , latitude: e.lngLat.lat })} }
         > {/* end of map component */}
 
-          {pin && <Pin longitude={pin.longitude} latitude={pin.latitude} color="red" />}
-          {targetPin && <Pin longitude={targetPin.longitude} latitude={targetPin.latitude} color="blue" />}
+      {/* Display the question */}
+      {started && question && !locked && (
+        <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)' }}>
+          <h2>{question.question}</h2>
+        </div>
+      )}
+
+      {/* Pins for user and target locations */}
+      {started && pin && <Pin longitude={pin.longitude} latitude={pin.latitude} color="red" />}
+      {targetPin && <Pin longitude={targetPin.longitude} latitude={targetPin.latitude} color="blue" />}
 
       {/* Line between the pin and the target */}
       {result && locked && pin && targetPin && (
@@ -137,8 +185,8 @@ function App() {
         <div
           style={{
             position: "absolute",
-            top: 20,
-            left: "50%",
+            top: "5%",
+            left: "80%",
             transform: "translateX(-50%)",
             backgroundColor: "white",
             padding: "10px",
@@ -151,10 +199,12 @@ function App() {
           <p>Target coordinates: {result.nearestTarget.centroid_lat}, {result.nearestTarget.centroid_lon}</p>
           <p>Target data zone code: {result.nearestTarget.data_zone_code}</p>
           <p>Cloud probability: {result.nearestTarget.cloud_probability}</p>
+          <p>Number of acquisitions: {result.nearestTarget.num_acquisitions}</p>
           <p>Distance from target: {Math.round(result.distance)} km</p>
           <p>Score: {result.score}</p>
         </div>
       )}
+
       {/* Story */}
       { result && locked &&
       <div
@@ -170,16 +220,31 @@ function App() {
           fontFamily: "Arial, sans-serif",
         }}
       >
-        <p>Something interesting to say about the game or the results.</p>
+        {/* ? is optional chaining - if question is null, stops it throwing an error */}
+        <p>{question?.story}</p>
       </div>
     }
+      {/* Start button */}
+      {(!started &&
+        <button 
+        onClick={handleStart}
+        style={{ position: "absolute", 
+          bottom: "50%", 
+          left: "50%", 
+          transform: "translateX(-50%)",
+          fontSize: "32px" }}
+        >
+        Start game
+        </button>
+      )}
+
 
       {/* Lock in button */}
-      {pin && !locked && (
+      {started && pin && !locked && (
         <button 
         onClick={handleLockIn}
         style={{ position: "absolute", 
-          bottom: 500, 
+          bottom: "80%", 
           left: "20%", 
           transform: "translateX(-50%)",
           fontSize: "24px" }}
@@ -188,13 +253,28 @@ function App() {
         </button>
       )}
 
+      {/* Next question button */}
+      {locked && questionIndex < Questions.length - 1 && (
+        <button 
+        onClick={handleNextQuestion}
+        style={{ position: "absolute", 
+          bottom: "80%",   
+          left: "20%", 
+          transform: "translateX(-50%)",
+          fontSize: "24px" }}
+        >
+        Next question
+        </button>
+      )}
+
+
       {/* Reset button - restores game to initial state */}
-      {result && locked && (
+      {result && locked && started && (
         <button
         onClick={handleReset} 
         style={{ position: "absolute", 
-          bottom: 500, 
-          left: "20%", 
+          bottom: "20%",
+          left: "80%", 
           transform: "translateX(-50%)",
           fontSize: "24px" }}
         >
