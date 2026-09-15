@@ -5,11 +5,6 @@ export type Coords = {
     lon: number
 }
 
-export const target_coords = {
-    // Rhondda Cynon Taf, Wales
-    lat: 51.658,
-    lon: -3.450 
-}
 
 export function haversineDistance(target_coords: Coords, pin_coords: Coords): number {
 
@@ -29,7 +24,7 @@ export function haversineDistance(target_coords: Coords, pin_coords: Coords): nu
     const distance = R * c; // Distance in metres
     return distance / 1000; // convert to km
 }
-
+/* scoring falls off exponentially, max score 1000, 100 km away gives a score of 500 */
 export function calculateScore(distance: number): number { 
     const maxScore = 1000; 
     const maxBreakpoint = 50; // distance in kilometres where score starts to decay

@@ -1,0 +1,7 @@
+[project]
+name = "python"
+version = "0.1.0"
+description = "GeoPackage data processing for the Imago Summit game"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ['geopandas']
