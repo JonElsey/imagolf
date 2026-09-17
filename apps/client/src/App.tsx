@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react"
-import Map, { Layer, Marker as Pin, Source } from "react-map-gl/maplibre"
+import "./App.css"
+import { Marker as Pin } from "react-map-gl/maplibre"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "./map/maplibre"
+import { LineBetweenPins, UKMap } from "./map/map"
 import { haversineDistance, calculateScore } from "./game/scoring"
 import { Questions } from "./game/question"
+import TimerDisplay from "./components/timer"
+import ResultsPanel from "./components/results"
 import type { Question, Area, Result } from "./game/types"
 
-// lots of inline styling - later this will become css 
 
 function App() { 
   /* variable to hold pin location. either a point object or null. */ 
@@ -16,13 +19,15 @@ function App() {
   const [targetPin, setTargetPin] = useState<{ longitude: number; latitude: number } | null>(null)
   const [locked, setLocked] = useState(false); // locking in the pin calculates the score
   const [result, setResult] = useState<Result | null>(null);
-  const [areas, setAreas] = useState<Area[]>([]); // array of areas loaded from JSON
   const [targets, setTargets] = useState<Area[]>([]); // array of targets loaded from JSON
   const [question, setQuestion] = useState<Question | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0); // index of the current question
   const [started, setStarted] = useState(false); // whether the game has started
   const [totalScore, setTotalScore] = useState(0); // total score for the game
   const [showSummary, setShowSummary] = useState(false); // whether to show the summary message at the end of the game
+  const [timeLeft, setTimeLeft] = useState<number | null>(null); // time left for the current question
+  const [timeUp, setTimeUp] = useState(false); // whether the time is up for the current question
+  const [showStory, setShowStory] = useState(false); // whether to show the story for the current question
 
   function handleReset() { 
     // need to set a bunch of things to null
@@ -35,6 +40,9 @@ function App() {
     setStarted(false);
     setShowSummary(false);
     setTotalScore(0); // reset total score to 0
+    setTimeUp(false);
+    setTimeLeft(null); // reset time left to null
+    setShowStory(false); // reset show story to false
   }
 
   function handleStart() {
@@ -43,6 +51,7 @@ function App() {
     setQuestionIndex(0); // reset question index to 0
     setQuestion(Questions[0]);
     setTotalScore(0); // reset total score to 0
+    setTimeLeft(Questions[0].time_limit); // set time left to the time limit of the first question
   }
 
   function handleNextQuestion() {
@@ -55,7 +64,9 @@ function App() {
       setPin(null);
       setTargetPin(null);
       setLocked(false);
+      setTimeLeft(Questions[nextIndex].time_limit); // set time left to the time limit of the next question
       setResult(null);
+      setShowStory(false); // make the story go away
     } else {
       console.log("No more questions");
     }
@@ -63,7 +74,9 @@ function App() {
 
   function handleLockIn() {
     // store pin location in local storage and calculate score 
-    if (!pin) return; // if no pin, do nothing
+    if (!pin) {  // no pin has been placed, so user has run out of time
+      return;
+    } // if no pin, and time is up, set score to 0
 
       let nearestDistance = Infinity;
       let nearestTarget: Area | null = null;
@@ -90,6 +103,7 @@ function App() {
       setResult({ score, distance: nearestDistance, nearestTarget });
       setTotalScore(prev => prev + score); // add score to total score
       setLocked(true);
+      setShowStory(true); // show the story after locking in the pin
   }
 
   function handleShowSummary() {
@@ -104,7 +118,6 @@ function App() {
       .then(res => res.json())
       .then(data => {
         console.log("Loaded areas data for question", question.question, data[0])
-        setAreas(data)
         const sortedAreas = [...data].sort((a: any, b: any) => {
           if (question.statistic === "max") {
             return (b as any)[question.variable] - (a as any)[question.variable];
@@ -122,110 +135,82 @@ function App() {
   }, [question]);
   
 
+  /* timed out message - if the user has run out of time, display a message and lock in the pin */
+  useEffect(() => {
+    if (timeLeft === 0 && !locked) {
+      if (pin) { 
+        handleLockIn();
+      }
+      setTimeUp(true);
+      setLocked(true);
+      setShowStory(true); // show story even if time is up
+    }
+  }, [timeLeft]);
+  
+  /* count timer down */ 
+  useEffect(() => {
+    if (!started || locked || timeLeft === null) return; // if game not started, or locked, or no time limit, do nothing
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev === null || prev <= 0) return prev; // handle case where timeLeft is null or below 0 - return previous value
+        return prev - 1; // decrement time left
+      });
+    }, 1000); /* run every second */
+    return () => clearInterval(timer); // cleanup timer on unmount
+  }, [started, locked, questionIndex]);
+
+
   return (
+    // overall div
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <Map 
-        initialViewState={{
-          bounds: [-8.7, 49.8, 1.8, 60.9],
-        }}
-        maxBounds={[-12, 48, 4, 62]}
-        style={{ width: "100%", height: "100%" }}
-        mapStyle="https://tiles.openfreemap.org/styles/positron"
-        onClick={(e) => {if (!locked) setPin({ longitude: e.lngLat.lng , latitude: e.lngLat.lat })} }
-        > {/* end of map component */}
 
-      {/* Display the question */}
-      {started && question && !locked && (
-        <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)' }}>
-          <h2>{question.question}</h2>
-        </div>
-      )}
+      {/* Map components */}
+      <UKMap locked={locked} setPin={setPin}>
 
-      {/* Pins for user and target locations */}
-      {started && pin && <Pin longitude={pin.longitude} latitude={pin.latitude} color="red" />}
-      {targetPin && <Pin longitude={targetPin.longitude} latitude={targetPin.latitude} color="blue" />}
+        {/* Display the question - at the moment written directly on the map. Probably wants to be a panel */}
+        {started && question && !locked && (
+          <div className="panel question-header">
+            <h2>{question.question}</h2>
+          </div>
+        )}
 
-      {/* Line between the pin and the target */}
-      {result && locked && pin && targetPin && (
-        <Source 
-        type="geojson"
-        data={{
-          type: "Feature",
-          geometry: {
-            type: "LineString",
-            coordinates: [
-              [pin.longitude, pin.latitude],
-              [result.nearestTarget.centroid_lon,
-              result.nearestTarget.centroid_lat]
-            ]   
-          }
-        }}
-        >
-          <Layer 
-          type="line"
-          paint={{
-            "line-color": "blue",
-            "line-width": 2,
-            "line-dasharray": [4, 4],
-          }}
-          />
-        </Source>
-      )}
-      </Map>
+        {/* Pins for user and target locations */}
+        {started && pin && <Pin longitude={pin.longitude} latitude={pin.latitude} color="red" />}
+        {targetPin && <Pin longitude={targetPin.longitude} latitude={targetPin.latitude} color="blue" />}
+
+        {/* Line between the pin and the target */}
+        {result && locked && pin && targetPin && (
+          <LineBetweenPins pin={pin} result={result} />
+        )}
+
+        {/* Placeholder for future choropleth map layer */}
+
+      </UKMap>
 
       {/* Display results */}
       {result && locked && !showSummary && question && (
-        <div
-          style={{
-            position: "absolute",
-            top: "5%",
-            left: "80%",
-            transform: "translateX(-50%)",
-            backgroundColor: "white",
-            padding: "10px",
-            borderRadius: "5px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
-          <h3>Results</h3>
-          <p>Target coordinates: {result.nearestTarget.centroid_lat.toFixed(3)}, {result.nearestTarget.centroid_lon.toFixed(3)}</p>
-          <p>Target data zone code: {result.nearestTarget.data_zone_code}</p>
-          <p>Cloud probability: {(result.nearestTarget.cloud_probability.toFixed(2))}</p>
-          <p>Number of acquisitions: {result.nearestTarget.num_acquisitions}</p>
-          <p>Distance from target: {(result.distance.toFixed(2))} km</p>
-          <p>Score: {result.score}</p>
-        </div>
-      )}
+        <ResultsPanel result={result} />
+      )} 
 
       {/* Story */}
-      { result && locked && !showSummary && question &&
-      <div
-        style={{
-          position: "absolute",
-          top: "80%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "white",
-          padding: "10px",
-          borderRadius: "5px",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        {/* ? is optional chaining - if question is null, stops it throwing an error */}
-        <p>{question?.story}</p>
+      {/* Story close button - when clicked, hides the story */}
+      {locked && !showSummary && question && showStory && (
+        <div className="panel panel-story">
+          <p>{question?.story}</p>
+      <button
+        onClick={() => setShowStory(false)}
+        className="close-button"
+        >
+        x
+      </button>
       </div>
-    }
+      )}
+
       {/* Start button */}
       {(!started &&
         <button 
         onClick={handleStart}
-        style={{ position: "absolute", 
-          bottom: "50%", 
-          left: "50%", 
-          transform: "translateX(-50%)",
-          fontSize: "32px" }}
+        className="button button-start"
         >
         Start game
         </button>
@@ -236,25 +221,17 @@ function App() {
       {started && pin && !locked && (
         <button 
         onClick={handleLockIn}
-        style={{ position: "absolute", 
-          bottom: "80%", 
-          left: "20%", 
-          transform: "translateX(-50%)",
-          fontSize: "24px" }}
+        className="button button-progress"
         >
         Lock in!
         </button>
       )}
 
       {/* Next question button */}
-      {locked && questionIndex < Questions.length - 1 && (
+      {locked && !timeUp && questionIndex < Questions.length - 1 && (
         <button 
         onClick={handleNextQuestion}
-        style={{ position: "absolute", 
-          bottom: "80%",   
-          left: "20%", 
-          transform: "translateX(-50%)",
-          fontSize: "24px" }}
+        className="button button-progress"
         >
         Next question
         </button>
@@ -262,49 +239,53 @@ function App() {
 
       {/* Summary message that displays at the end of the game */}
       {showSummary && (
-        <div
-          style={{
-            position: "absolute",
-            top: "20%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "white",
-            padding: "10px",
-            borderRadius: "5px",
-            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-            fontFamily: "Arial, sans-serif",
-          }}
-        >
+        <div className="panel panel-summary">
           <p>Game over.</p>
           <p>Final score: {totalScore}/{Questions.length * 1000}</p>
           <p>Restart by pressing the Reset button.</p>
         </div>
       )}
 
+      {/* Time left display */}
+      {started && !locked && timeLeft !== null && (
+        <TimerDisplay timeLeft={timeLeft} />
+      )
+      }
+
       {/* Show summary button - only visible at the end of the game */}
-      {locked && questionIndex === Questions.length - 1 && !showSummary && (
+      {locked && !timeUp && questionIndex === Questions.length - 1 && !showSummary && (
         <button
-        onClick={handleShowSummary} 
-        style={{ position: "absolute", 
-          bottom: "80%",
-          left: "20%", 
-          transform: "translateX(-50%)",
-          fontSize: "24px" }}
+        onClick={handleShowSummary}
+        className="button button-summary"
         >
         Show summary
         </button>
       )
       }
 
+      {/* Time's up message - if the user has run out of time and hasn't placed a pin, display a message and lock in the pin */}
+      {/* if the pin has been placed, then dont show this, as the pin gets locked in place */}
+
+      {timeUp && !showSummary && (
+        <div className="overlay-backdrop">
+          {/* Time's up panel - if the user has run out of time, display a message and lock in the pin */}
+          <div className="panel panel-timer">
+            {/* conditional - if no pin, then score 0, else pin gets locked in, communicate this to the user */}
+            {!pin ? (
+            <p>Time's up! No pin placed — score: 0</p>
+            ) : (
+            <p>Time's up! Pin locked in - score: {result?.score}</p>
+            )}
+            <button onClick={() => setTimeUp(false)}>Dismiss</button>
+          </div>
+        </div>
+        )}
+
       {/* Reset button - restores game to initial state. Always visible after first question has been answered */}
-      {result && locked && started && (
+      {locked && started && (
         <button
         onClick={handleReset} 
-        style={{ position: "absolute", 
-          bottom: "20%",
-          left: "80%", 
-          transform: "translateX(-50%)",
-          fontSize: "24px" }}
+        className="button button-reset"
         >
         Reset
         </button>
