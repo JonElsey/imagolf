@@ -1,6 +1,6 @@
 import type { Result } from "../game/types"
 
-function ResultsPanel({ result }: { result: Result | null }) {
+function ResultsPanel({ result, onClose }: { result: Result | null; onClose: () => void }) {
     return ( 
         <div className="panel panel-results">
           <h3>Results</h3>
@@ -12,6 +12,7 @@ function ResultsPanel({ result }: { result: Result | null }) {
               <p>Number of acquisitions: {result.nearestTarget.num_acquisitions}</p>
               <p>Distance from target: {(result.distance.toFixed(2))} km</p>
               <p>Score: {result.score}</p>
+              <button className="close-button" onClick={onClose}>×</button>
             </>
           )}
         </div>

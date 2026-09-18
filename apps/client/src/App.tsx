@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react"
 import "./App.css"
 import { Marker as Pin } from "react-map-gl/maplibre"
@@ -28,6 +29,9 @@ function App() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null); // time left for the current question
   const [timeUp, setTimeUp] = useState(false); // whether the time is up for the current question
   const [showStory, setShowStory] = useState(false); // whether to show the story for the current question
+  const [showResults, setShowResults] = useState(false); // whether to show the results for the current question
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false); // whether the menu is open
 
   function handleReset() { 
     // need to set a bunch of things to null
@@ -43,6 +47,7 @@ function App() {
     setTimeUp(false);
     setTimeLeft(null); // reset time left to null
     setShowStory(false); // reset show story to false
+    setShowResults(false); // reset show results to false
   }
 
   function handleStart() {
@@ -67,6 +72,7 @@ function App() {
       setTimeLeft(Questions[nextIndex].time_limit); // set time left to the time limit of the next question
       setResult(null);
       setShowStory(false); // make the story go away
+      setShowResults(false); // make the results go away
     } else {
       console.log("No more questions");
     }
@@ -104,6 +110,7 @@ function App() {
       setTotalScore(prev => prev + score); // add score to total score
       setLocked(true);
       setShowStory(true); // show the story after locking in the pin
+      setShowResults(true); // show the results after locking in the pin
   }
 
   function handleShowSummary() {
@@ -117,6 +124,7 @@ function App() {
     fetch(question.file)
       .then(res => res.json())
       .then(data => {
+        setAreas(data); // store areas in state
         console.log("Loaded areas data for question", question.question, data[0])
         const sortedAreas = [...data].sort((a: any, b: any) => {
           if (question.statistic === "max") {
@@ -162,80 +170,69 @@ function App() {
 
   return (
     // overall div
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
+      {/* Header */}
+      <div className="bar header">
+        <h1>Imagolf - A map guessing game</h1>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <p>Score: {totalScore}</p>
+          <button className="button button-menu" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+        </div>
+      </div>
       {/* Map components */}
-      <UKMap locked={locked} setPin={setPin}>
-
-        {/* Display the question - at the moment written directly on the map. Probably wants to be a panel */}
-        {started && question && !locked && (
-          <div className="panel question-header">
-            <h2>{question.question}</h2>
-          </div>
-        )}
-
+      <UKMap locked={locked} setPin={setPin} areas={locked ? areas : []} variable={question?.variable || ""}>
+        <div className = "map-top-overlay">
+          {/* Display the question */}
+          {started && question && !locked && (
+            <div className="panel question-header">
+              <h2>{question.question}</h2>
+            </div>
+          )}
+          {/* Time left display */}
+          {started && !locked && timeLeft !== null && (
+            <TimerDisplay timeLeft={timeLeft} />
+          )
+          }
+        </div>
         {/* Pins for user and target locations */}
-        {started && pin && <Pin longitude={pin.longitude} latitude={pin.latitude} color="red" />}
-        {targetPin && <Pin longitude={targetPin.longitude} latitude={targetPin.latitude} color="blue" />}
+        {started && pin && 
+          <Pin longitude={pin.longitude} 
+               latitude={pin.latitude} 
+               color="#FF8F42" />} {/* Imago orange for user pin */}
 
+        {targetPin && 
+          <Pin longitude={targetPin.longitude} 
+               latitude={targetPin.latitude} 
+               color="#03CEA3" />} {/* Imago teal for target pin */}
+
+               
         {/* Line between the pin and the target */}
         {result && locked && pin && targetPin && (
           <LineBetweenPins pin={pin} result={result} />
+          
         )}
 
-        {/* Placeholder for future choropleth map layer */}
-
       </UKMap>
+      
 
-      {/* Display results */}
-      {result && locked && !showSummary && question && (
-        <ResultsPanel result={result} />
-      )} 
-
-      {/* Story */}
-      {/* Story close button - when clicked, hides the story */}
-      {locked && !showSummary && question && showStory && (
-        <div className="panel panel-story">
-          <p>{question?.story}</p>
-      <button
-        onClick={() => setShowStory(false)}
-        className="close-button"
-        >
-        x
-      </button>
-      </div>
+      {/* Display results and story */}
+      {locked && !showSummary && question && (showResults || showStory) && (
+        <div className="overlay-backdrop">
+          <div className="reveal-panels">
+            {showResults && result && (
+              <ResultsPanel result={result} onClose={() => setShowResults(false)} />
+            )}
+            {showStory && (
+              <div className="panel panel-story">
+                <h3>Info</h3>
+                <p>{question?.story}</p>
+                <button className="close-button" onClick={() => setShowStory(false)}>×</button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Start button */}
-      {(!started &&
-        <button 
-        onClick={handleStart}
-        className="button button-start"
-        >
-        Start game
-        </button>
-      )}
-
-
-      {/* Lock in button */}
-      {started && pin && !locked && (
-        <button 
-        onClick={handleLockIn}
-        className="button button-progress"
-        >
-        Lock in!
-        </button>
-      )}
-
-      {/* Next question button */}
-      {locked && !timeUp && questionIndex < Questions.length - 1 && (
-        <button 
-        onClick={handleNextQuestion}
-        className="button button-progress"
-        >
-        Next question
-        </button>
-      )}
 
       {/* Summary message that displays at the end of the game */}
       {showSummary && (
@@ -246,22 +243,9 @@ function App() {
         </div>
       )}
 
-      {/* Time left display */}
-      {started && !locked && timeLeft !== null && (
-        <TimerDisplay timeLeft={timeLeft} />
-      )
-      }
 
-      {/* Show summary button - only visible at the end of the game */}
-      {locked && !timeUp && questionIndex === Questions.length - 1 && !showSummary && (
-        <button
-        onClick={handleShowSummary}
-        className="button button-summary"
-        >
-        Show summary
-        </button>
-      )
-      }
+
+
 
       {/* Time's up message - if the user has run out of time and hasn't placed a pin, display a message and lock in the pin */}
       {/* if the pin has been placed, then dont show this, as the pin gets locked in place */}
@@ -276,20 +260,76 @@ function App() {
             ) : (
             <p>Time's up! Pin locked in - score: {result?.score}</p>
             )}
-            <button onClick={() => setTimeUp(false)}>Dismiss</button>
+            <button 
+            className="button-inline"
+            onClick={() => setTimeUp(false)}>Dismiss 
+            </button>
           </div>
         </div>
         )}
 
-      {/* Reset button - restores game to initial state. Always visible after first question has been answered */}
-      {locked && started && (
-        <button
-        onClick={handleReset} 
-        className="button button-reset"
-        >
-        Reset
-        </button>
-      )}
+
+
+      {/* Controls */}
+      <div className="bar">
+      {/* Buttons go here */}
+        {/* Show summary button - only visible at the end of the game */}
+        {locked && !timeUp && questionIndex === Questions.length - 1 && !showSummary && (
+          <button
+          onClick={handleShowSummary}
+          className="button button-summary"
+          >
+          Show summary
+          </button>
+        )
+        }
+
+        {/* Next question button */}
+        {locked && !timeUp && questionIndex < Questions.length - 1 && (
+          <button 
+          onClick={handleNextQuestion}
+          className="button button-progress"
+          >
+          Next question
+          </button>
+        )}
+        {/* Start button */}
+        {(!started &&
+          <button 
+          onClick={handleStart}
+          className="button button-start"
+          >
+          Start game
+          </button>
+        )}
+
+        {/* Lock in button */}
+        {started && pin && !locked && (
+          <button 
+          onClick={handleLockIn}
+          className="button button-progress"
+          >
+          Lock in!
+          </button>
+        )}
+        {/* Reset button - restores game to initial state. Always visible after first question has been answered */}
+        {locked && started && (
+          <button
+          onClick={handleReset} 
+          className="button button-reset"
+          >
+          Reset
+          </button>
+        )}
+        {/* Menu drawer */}
+        <div className={`menu-backdrop ${menuOpen ? "open" : ""}`} 
+            onClick={() => setMenuOpen(false)} />
+          <div className={`menu-drawer ${menuOpen ? "open" : ""}`}>
+            <button className="close-button" onClick={() => setMenuOpen(false)}>×</button>
+            <h2>Settings</h2>
+            {/* placeholder for now */}
+          </div>
+        </div>
 
     </div>
   )
