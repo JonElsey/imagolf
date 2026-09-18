@@ -1,4 +1,4 @@
-import "../App.css"
+import "../map/map.css"
 
 function TimerDisplay({ timeLeft }: { timeLeft: number }) {
     return (

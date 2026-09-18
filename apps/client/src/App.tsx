@@ -9,6 +9,8 @@ import { haversineDistance, calculateScore } from "./game/scoring"
 import { Questions } from "./game/question"
 import TimerDisplay from "./components/timer"
 import ResultsPanel from "./components/results"
+import { MenuDrawer } from "./components/menu"
+import { HelpOverlay, ScoringOverlay } from "./components/menu-content"
 import type { Question, Area, Result } from "./game/types"
 
 
@@ -32,22 +34,18 @@ function App() {
   const [showResults, setShowResults] = useState(false); // whether to show the results for the current question
   const [areas, setAreas] = useState<Area[]>([]);
   const [menuOpen, setMenuOpen] = useState(false); // whether the menu is open
+  const [showScoring, setShowScoring] = useState(false); // whether to show the scoring overlay
+  const [showHelp, setShowHelp] = useState(() => {
+    return !localStorage.getItem("helpSeen"); // show help if it hasn't been shown before
+  })
 
-  function handleReset() { 
-    // need to set a bunch of things to null
-    setPin(null);
-    setTargetPin(null);
-    setLocked(false);
-    setResult(null);
-    setQuestionIndex(0);  // reset question index to 0
-    setQuestion(null);
-    setStarted(false);
-    setShowSummary(false);
-    setTotalScore(0); // reset total score to 0
-    setTimeUp(false);
-    setTimeLeft(null); // reset time left to null
-    setShowStory(false); // reset show story to false
-    setShowResults(false); // reset show results to false
+  function dismissHelp() {
+    setShowHelp(false);
+    localStorage.setItem("helpSeen", "true"); // store in local storage that the help has been shown
+  }
+
+  function dismissScoring() {
+    setShowScoring(false);
   }
 
   function handleStart() {
@@ -117,6 +115,22 @@ function App() {
     setShowSummary(true);
   }
 
+  function handleReset() { 
+    // need to set a bunch of things to null
+    setPin(null);
+    setTargetPin(null);
+    setLocked(false);
+    setResult(null);
+    setQuestionIndex(0);  // reset question index to 0
+    setQuestion(null);
+    setStarted(false);
+    setShowSummary(false);
+    setTotalScore(0); // reset total score to 0
+    setTimeUp(false);
+    setTimeLeft(null); // reset time left to null
+    setShowStory(false); // reset show story to false
+    setShowResults(false); // reset show results to false
+  }
 
   // load the areas data from the JSON file when the question changes
   useEffect(() => {
@@ -173,10 +187,14 @@ function App() {
     <div style={{ display: "flex", flexDirection: "column", width: "100%", height: "100%" }}>
       {/* Header */}
       <div className="bar header">
+        {/* Logo and title */}
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <img src="/Imago-logo.png" alt="Imago logo" className="header-logo" />
+        </div>
         <h1>Imagolf - A map guessing game</h1>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <p>Score: {totalScore}</p>
-          <button className="button button-menu" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+          <button className="button button-menu-toplevel" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
         </div>
       </div>
       {/* Map components */}
@@ -243,13 +261,8 @@ function App() {
         </div>
       )}
 
-
-
-
-
       {/* Time's up message - if the user has run out of time and hasn't placed a pin, display a message and lock in the pin */}
       {/* if the pin has been placed, then dont show this, as the pin gets locked in place */}
-
       {timeUp && !showSummary && (
         <div className="overlay-backdrop">
           {/* Time's up panel - if the user has run out of time, display a message and lock in the pin */}
@@ -268,7 +281,11 @@ function App() {
         </div>
         )}
 
-
+      {/* Help overlay */}
+      <HelpOverlay show={showHelp} onClose={dismissHelp} />
+      {/* Scoring overlay */}
+      <ScoringOverlay show={showScoring} onClose={dismissScoring} />
+      
 
       {/* Controls */}
       <div className="bar">
@@ -322,15 +339,9 @@ function App() {
           </button>
         )}
         {/* Menu drawer */}
-        <div className={`menu-backdrop ${menuOpen ? "open" : ""}`} 
-            onClick={() => setMenuOpen(false)} />
-          <div className={`menu-drawer ${menuOpen ? "open" : ""}`}>
-            <button className="close-button" onClick={() => setMenuOpen(false)}>×</button>
-            <h2>Settings</h2>
-            {/* placeholder for now */}
-          </div>
-        </div>
+        <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onShowHelp={() => setShowHelp(true)} onShowScoring={() => setShowScoring(true)} />
 
+    </div>
     </div>
   )
 }

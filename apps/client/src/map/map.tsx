@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "./maplibre"
+import "./map.css"
 import Map, { Layer, Source, useMap } from "react-map-gl/maplibre"
 import type { Result, Area } from "../game/types"
 

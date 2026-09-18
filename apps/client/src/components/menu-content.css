@@ -1,0 +1,9 @@
+.panel-menu-popup {
+  position: relative;
+  max-width: 400px;
+}
+
+.panel-menu-popup a {
+  color: var(--color-teal);
+  text-decoration: underline;
+}
