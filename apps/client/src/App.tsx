@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react"
+import { useReducer, useState, useEffect } from "react"
 import "./App.css"
 import { Marker as Pin } from "react-map-gl/maplibre"
 import "maplibre-gl/dist/maplibre-gl.css"
@@ -7,32 +7,22 @@ import "./map/maplibre"
 import { LineBetweenPins, UKMap } from "./map/map"
 import { haversineDistance, calculateScore } from "./game/scoring"
 import { Questions } from "./game/question"
+import { gameReducer, initialGameState } from "./game/state"
 import TimerDisplay from "./components/timer"
 import ResultsPanel from "./components/results"
 import { MenuDrawer } from "./components/menu"
 import { HelpOverlay, ScoringOverlay } from "./components/menu-content"
-import type { Question, Area, Result } from "./game/types"
+import type { Area } from "./game/types"
 
 
 function App() { 
-  /* variable to hold pin location. either a point object or null. */ 
-  // useState is a react hook that lets us store state in an object. 
-  // first value is the state variable, second is a function that updates it 
-  const [pin, setPin] = useState<{ longitude: number; latitude: number } | null>(null)
-  const [targetPin, setTargetPin] = useState<{ longitude: number; latitude: number } | null>(null)
-  const [locked, setLocked] = useState(false); // locking in the pin calculates the score
-  const [result, setResult] = useState<Result | null>(null);
-  const [targets, setTargets] = useState<Area[]>([]); // array of targets loaded from JSON
-  const [question, setQuestion] = useState<Question | null>(null);
-  const [questionIndex, setQuestionIndex] = useState(0); // index of the current question
-  const [started, setStarted] = useState(false); // whether the game has started
-  const [totalScore, setTotalScore] = useState(0); // total score for the game
-  const [showSummary, setShowSummary] = useState(false); // whether to show the summary message at the end of the game
-  const [timeLeft, setTimeLeft] = useState<number | null>(null); // time left for the current question
-  const [timeUp, setTimeUp] = useState(false); // whether the time is up for the current question
-  const [showStory, setShowStory] = useState(false); // whether to show the story for the current question
-  const [showResults, setShowResults] = useState(false); // whether to show the results for the current question
-  const [areas, setAreas] = useState<Area[]>([]);
+  // game state 
+  const [state, dispatch] = useReducer(gameReducer, initialGameState);
+  const { pin, targetPin, locked, result, targets, question, questionIndex,
+        started, totalScore, showSummary, timeLeft, timeUp, showStory, 
+        showResults, areas } = state
+
+  // UI hooks
   const [menuOpen, setMenuOpen] = useState(false); // whether the menu is open
   const [showScoring, setShowScoring] = useState(false); // whether to show the scoring overlay
   const [showHelp, setShowHelp] = useState(() => {
@@ -50,86 +40,44 @@ function App() {
 
   function handleStart() {
     // set the question to the first question in the array
-    setStarted(true);
-    setQuestionIndex(0); // reset question index to 0
-    setQuestion(Questions[0]);
-    setTotalScore(0); // reset total score to 0
-    setTimeLeft(Questions[0].time_limit); // set time left to the time limit of the first question
+    dispatch({ type: "START" });
   }
 
   function handleNextQuestion() {
     // set the question to the next question in the array
-    const nextIndex = questionIndex + 1;
-    if (nextIndex < Questions.length) {
-      setQuestionIndex(nextIndex); // increment question index for next question
-      setQuestion(Questions[nextIndex]);
-      // reset pin and result for next question
-      setPin(null);
-      setTargetPin(null);
-      setLocked(false);
-      setTimeLeft(Questions[nextIndex].time_limit); // set time left to the time limit of the next question
-      setResult(null);
-      setShowStory(false); // make the story go away
-      setShowResults(false); // make the results go away
-    } else {
-      console.log("No more questions");
-    }
+    dispatch({ type: "NEXT_QUESTION" });
   } 
 
-  function handleLockIn() {
-    // store pin location in local storage and calculate score 
-    if (!pin) {  // no pin has been placed, so user has run out of time
-      return;
-    } // if no pin, and time is up, set score to 0
+function handleLockIn() {
+  if (!pin) return
 
-      let nearestDistance = Infinity;
-      let nearestTarget: Area | null = null;
-
-      // loop through all targets - find the closest one and log the distance to it
-      for (const target of targets) { 
-        const targetDistance = haversineDistance(
-          { lat: target.centroid_lat, lon: target.centroid_lon },  // target coordinates
-          { lat: pin.latitude, lon: pin.longitude }  // pin coordinates
-        ); 
-
-        if (targetDistance < nearestDistance) {
-          nearestDistance = targetDistance;
-          nearestTarget = target;
-        }
-      }
-      // then calculate the score based on the distance to the closest target
-      const score = calculateScore(nearestDistance);
-      if (!nearestTarget) {
-        console.error("No nearest target found");
-        return;
-      }
-      setTargetPin({ longitude: nearestTarget.centroid_lon, latitude: nearestTarget.centroid_lat });
-      setResult({ score, distance: nearestDistance, nearestTarget });
-      setTotalScore(prev => prev + score); // add score to total score
-      setLocked(true);
-      setShowStory(true); // show the story after locking in the pin
-      setShowResults(true); // show the results after locking in the pin
+  let nearestDistance = Infinity
+  let nearestTarget: Area | null = null
+  for (const target of targets) {
+    const targetDistance = haversineDistance(
+      { lat: target.centroid_lat, lon: target.centroid_lon },
+      { lat: pin.latitude, lon: pin.longitude }
+    )
+    if (targetDistance < nearestDistance) {
+      nearestDistance = targetDistance
+      nearestTarget = target
+    }
   }
+  const score = calculateScore(nearestDistance)
+  if (!nearestTarget) return
+  dispatch({
+    type: "LOCK_IN",
+    result: { score, distance: nearestDistance, nearestTarget },
+    targetPin: { longitude: nearestTarget.centroid_lon, latitude: nearestTarget.centroid_lat },
+  })
+}
 
   function handleShowSummary() {
-    setShowSummary(true);
+    dispatch({ type: "SHOW_SUMMARY" });
   }
 
   function handleReset() { 
-    // need to set a bunch of things to null
-    setPin(null);
-    setTargetPin(null);
-    setLocked(false);
-    setResult(null);
-    setQuestionIndex(0);  // reset question index to 0
-    setQuestion(null);
-    setStarted(false);
-    setShowSummary(false);
-    setTotalScore(0); // reset total score to 0
-    setTimeUp(false);
-    setTimeLeft(null); // reset time left to null
-    setShowStory(false); // reset show story to false
-    setShowResults(false); // reset show results to false
+    dispatch({ type: "RESET" });
   }
 
   // load the areas data from the JSON file when the question changes
@@ -138,7 +86,7 @@ function App() {
     fetch(question.file)
       .then(res => res.json())
       .then(data => {
-        setAreas(data); // store areas in state
+        dispatch({ type: "LOAD_AREAS", areas: data, targets: [] });
         console.log("Loaded areas data for question", question.question, data[0])
         const sortedAreas = [...data].sort((a: any, b: any) => {
           if (question.statistic === "max") {
@@ -152,7 +100,7 @@ function App() {
             return 0;
           }
       })
-        setTargets(sortedAreas.slice(0, question.top_n)); // store top N targets in state
+        dispatch({ type: "LOAD_AREAS", areas: data, targets: sortedAreas.slice(0, question.top_n) });
     })
   }, [question]);
   
@@ -163,9 +111,7 @@ function App() {
       if (pin) { 
         handleLockIn();
       }
-      setTimeUp(true);
-      setLocked(true);
-      setShowStory(true); // show story even if time is up
+      dispatch({ type: "TIME_UP" });
     }
   }, [timeLeft]);
   
@@ -173,10 +119,7 @@ function App() {
   useEffect(() => {
     if (!started || locked || timeLeft === null) return; // if game not started, or locked, or no time limit, do nothing
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev === null || prev <= 0) return prev; // handle case where timeLeft is null or below 0 - return previous value
-        return prev - 1; // decrement time left
-      });
+        dispatch({ type: "TIMER_TICK" });
     }, 1000); /* run every second */
     return () => clearInterval(timer); // cleanup timer on unmount
   }, [started, locked, questionIndex]);
@@ -198,7 +141,7 @@ function App() {
         </div>
       </div>
       {/* Map components */}
-      <UKMap locked={locked} setPin={setPin} areas={locked ? areas : []} variable={question?.variable || ""}>
+      <UKMap locked={locked} setPin={(pin) => dispatch({ type: "SET_PIN", pin })} areas={locked ? areas : []} variable={question?.variable || "" } variableLabel={question?.variable_label || null}>
         <div className = "map-top-overlay">
           {/* Display the question */}
           {started && question && !locked && (
@@ -221,7 +164,7 @@ function App() {
         {targetPin && 
           <Pin longitude={targetPin.longitude} 
                latitude={targetPin.latitude} 
-               color="#03CEA3" />} {/* Imago teal for target pin */}
+               color="#24226F" />} {/* Imago navy for target pin */}
 
                
         {/* Line between the pin and the target */}
@@ -238,13 +181,13 @@ function App() {
         <div className="overlay-backdrop">
           <div className="reveal-panels">
             {showResults && result && (
-              <ResultsPanel result={result} onClose={() => setShowResults(false)} />
+              <ResultsPanel result={result} onClose={() => dispatch({ type: "DISMISS_RESULTS" })} />
             )}
             {showStory && (
               <div className="panel panel-story">
                 <h3>Info</h3>
                 <p>{question?.story}</p>
-                <button className="close-button" onClick={() => setShowStory(false)}>×</button>
+                <button className="close-button" onClick={() => dispatch({ type: "DISMISS_STORY" })}>×</button>
               </div>
             )}
           </div>
@@ -275,7 +218,7 @@ function App() {
             )}
             <button 
             className="button-inline"
-            onClick={() => setTimeUp(false)}>Dismiss 
+            onClick={() => dispatch({ type: "DISMISS_TIME_UP" })}>Dismiss 
             </button>
           </div>
         </div>

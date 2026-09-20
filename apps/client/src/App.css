@@ -44,9 +44,9 @@
 /* Shared button base */
 .button {
     background-color: var(--color-teal);
-    border: 3px solid var(--color-navy);
+    border: 6px solid var(--color-navy);
     font-family: var(--font-main);
-    font-size: 24px;
+    font-size: 20px;
     border-radius: 12px;
 }
 

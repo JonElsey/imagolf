@@ -25,6 +25,7 @@ export type Question = {
     top_n: number /* number of top areas to consider, in case there is huge geographic variability, we want to reward being close to the top areas, not just the single best area */
     story: string /* a short story about the question, to be displayed after the user has answered */
     time_limit: number | null /* time limit in seconds for the user to answer the question, or null if no time limit */
+    variable_label: string | null /* optional label for the variable, to be displayed in the UI */
 }
 
 export type Coords = {

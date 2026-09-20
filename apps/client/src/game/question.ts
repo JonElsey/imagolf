@@ -12,7 +12,8 @@ export const Questions: Question[] = [
         "to get a reasonable estimate!\n\n" + 
         "As you can see from the map, the cloudiest parts of the UK tend to be in the North West, specifically Scotland and Northern Ireland; mostly " +
         "due to weather systems coming in from the East Atlantic, and the orography of these areas.",
-        time_limit: 5
+        time_limit: 5,
+        variable_label: "Cloud probability (%)"
     },
     {
         question: "Where is the LSOA least likely to be cloudy according to SPF?", 
@@ -27,6 +28,7 @@ export const Questions: Question[] = [
         "Some areas get more acquisitions than others, so they have more samples => better estimate of the mean cloudiness. " +
          "We apply a quantile mapping correction to account for biases in acquisition counts across the UK, ensuring that " +
          "areas with fewer acquisitions get more representative values.\n\n",
+        variable_label: "Cloud probability (%)",
         time_limit: 5
 
     },
@@ -44,6 +46,7 @@ export const Questions: Question[] = [
          "You may notice that the acquisition pattern looks strange in some parts of the UK - this is due to the fact that we are aggregating down to LSOA level. " +
          "The pattern on this map looks closer to the actual acquisition pattern where we have more densely packed LSOAs, and stranger where we have larger ones. " +
          "This also explains why some LSOAs have a decimal number of acquisitions - since we are averaging the acquisition count per pixel across the LSOA!",
-        time_limit: 5
+        time_limit: 5,
+        variable_label: "Number of acquisitions"
         }
 ]

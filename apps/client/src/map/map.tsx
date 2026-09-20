@@ -8,6 +8,26 @@ import type { Result, Area } from "../game/types"
 // children is a special React property that gets filled in with whatever is between
 // the opening and closing tags of this component when it is used
 
+function ColourScale({ areas, variable, variableLabel }: { areas: Area[], variable: string, variableLabel: string | null }) {
+    if (areas.length === 0) return null
+
+    const values = areas.map(a => (a as any)[variable])
+    const min = Math.min(...values)
+    const max = Math.max(...values)
+    
+    return (
+        <div className="colour-scale">
+            {/* use either the variable label if provided, or the variable name if not */}
+            <h3 style={{ textAlign: "center", color: "white", textShadow: "0 1px 3px rgba(0, 0, 0, 0.8)" }}>{variableLabel || variable}</h3>
+            <div className="colour-scale-bar" />
+            <div className="colour-scale-labels">
+                <span>{min.toFixed(1)}</span>
+                <span>{max.toFixed(1)}</span>
+            </div>
+        </div>
+    )
+}
+
 function ChoroplethLayer({areas, variable}: {areas: Area[], variable: string}) {
     const { current: map } = useMap()
 
@@ -40,12 +60,13 @@ function ChoroplethLayer({areas, variable}: {areas: Area[], variable: string}) {
 
 
 // main map component, restricted to the UK, with a click handler that sets the pin location if the map is not locked
-export function UKMap({locked, setPin, areas, variable, children}: {
+export function UKMap({locked, setPin, areas, variable, variableLabel, children}: {
     locked: boolean, 
     setPin: (pin: { longitude: number, latitude: number }) => void, 
     areas: Area[],
     variable: string,
     children: React.ReactNode
+    variableLabel: string | null
   }) {
 
     const [hoveredCode, setHoveredCode] = useState<string | null>(null)
@@ -147,7 +168,8 @@ export function UKMap({locked, setPin, areas, variable, children}: {
         {/* Render the choropleth map */}
         <ChoroplethLayer areas={areas} variable={variable} />
         </Map>
-        
+        {/* Colour scale - only renders after areas passed in */}
+        <ColourScale areas={areas} variable={variable} variableLabel={variableLabel} />
         {hoveredCode && cursorPos && (
             <div className="tooltip" style={{ left: cursorPos.x + 10, top: cursorPos.y + 10
             }}>

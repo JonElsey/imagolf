@@ -15,10 +15,11 @@ export function HelpOverlay({ show, onClose }: { show: boolean; onClose: () => v
                 <li>the timer runs out</li>
             </ul>
         </p>
-        <p>Once either of these things happen</p>
+        <p>Once either of these things happen, your answer will be locked in and points calculated.</p>
         <p><i>Hint: be sure to place a pin before the timer runs out, else you will score 0 points for that round!</i></p>
-        <p>Once your answer is locked in, you will be shown the correct answer and your score for that question.</p>
+        <p>After each round, you will be shown the correct answer and your score for that question.</p>
         <p>There are several rounds in the game, and your score is the sum of your scores for each round.</p>
+        <p>The aim is to be the most below par!</p>
         <p>Good luck!</p>
         <button className="button-inline" onClick={onClose}>Got it</button>
       </div>
