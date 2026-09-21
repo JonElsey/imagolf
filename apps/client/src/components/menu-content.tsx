@@ -1,6 +1,5 @@
 
 // components/help.tsx
-import { useState } from "react"
 import "./menu-content.css"
 
 export function HelpOverlay({ show, onClose }: { show: boolean; onClose: () => void }) {
