@@ -216,6 +216,12 @@ function handleLockIn() {
                 <button className="close-button" onClick={() => dispatch({ type: "DISMISS_STORY" })}>×</button>
               </div>
             )}
+            {!timeUp && questionIndex < all_questions.length - 1 && (
+              <button onClick={handleNextQuestion} className="button button-progress">Next question</button>
+            )}
+            {!timeUp && questionIndex === all_questions.length - 1 && (
+              <button onClick={handleShowSummary} className="button button-summary">Show summary</button>
+            )}
           </div>
         </div>
       )}
@@ -259,26 +265,6 @@ function handleLockIn() {
       {/* Controls */}
       <div className="bar">
       {/* Buttons go here */}
-        {/* Show summary button - only visible at the end of the game */}
-        {locked && !timeUp && questionIndex === all_questions.length - 1 && !showSummary && (
-          <button
-          onClick={handleShowSummary}
-          className="button button-summary"
-          >
-          Show summary
-          </button>
-        )
-        }
-
-        {/* Next question button */}
-        {locked && !timeUp && questionIndex < all_questions.length - 1 && (
-          <button 
-          onClick={handleNextQuestion}
-          className="button button-progress"
-          >
-          Next question
-          </button>
-        )}
         {/* Start button */}
         {(!started &&
           <button 

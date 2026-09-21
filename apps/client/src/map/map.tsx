@@ -83,7 +83,6 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
         onMouseMove={(e) => {
             const feature = e.features?.[0]
             const map = e.target
-            // clear previous highlight
             if (hoveredCode) {
                 map.setFeatureState(
                     { source: "lsoa-boundaries", sourceLayer: "lsoa", id: hoveredCode },
@@ -98,6 +97,9 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
                 )
                 setHoveredCode(code)
                 setCursorPos(e.point)
+            } else {
+                setHoveredCode(null)
+                setCursorPos(null)
             }
         }}
         onMouseLeave={() => {

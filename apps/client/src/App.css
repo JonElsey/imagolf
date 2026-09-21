@@ -131,6 +131,9 @@
 }
 
 .panel-results { position: relative; }
+.panel-results p {
+  margin: 4px 0;
+}
 
 .panel-story {
   position: relative;
