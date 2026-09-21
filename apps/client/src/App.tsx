@@ -87,7 +87,7 @@ function handleLockIn() {
   useEffect(() => {
     async function getQuestions() {
         try {
-          const manifestRes = await fetch("/questions/all-questions.yaml")
+          const manifestRes = await fetch(`${import.meta.env.BASE_URL}questions/all-questions.yaml`)        
           const manifestText = await manifestRes.text()
           const filenames = parseYaml(manifestText)
           console.log("Filenames:", filenames)
@@ -159,8 +159,7 @@ function handleLockIn() {
       <div className="bar header">
         {/* Logo and title */}
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <img src="/Imago-logo.png" alt="Imago logo" className="header-logo" />
-        </div>
+        <img src={`${import.meta.env.BASE_URL}Imago-logo.png`} alt="Imago logo" className="header-logo" />        </div>
         <h1>Imagolf - A map guessing game</h1>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <p>Score: {totalScore}</p>
