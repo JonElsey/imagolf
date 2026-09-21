@@ -1,14 +1,13 @@
 // Code for managing game state
 
 import type { Question, Area, Result } from "./types";
-import { Questions } from "./question"
 
 export type GameState = {
     pin: { longitude: number, latitude: number } | null
     targetPin: { longitude: number, latitude: number } | null
     locked: boolean
     result: Result | null
-    targets: Area[] | null
+    targets: Area[] 
     question: Question | null
     questionIndex: number
     started: boolean
@@ -19,6 +18,7 @@ export type GameState = {
     showStory: boolean
     showResults: boolean
     areas: Area[] 
+    all_questions: Question[]
 }
 
 export const initialGameState: GameState = {
@@ -26,7 +26,7 @@ export const initialGameState: GameState = {
     targetPin: null,
     locked: false,
     result: null,
-    targets: null,
+    targets: [],
     question: null,
     questionIndex: 0,
     started: false,
@@ -36,10 +36,12 @@ export const initialGameState: GameState = {
     timeUp: false,
     showStory: false,
     showResults: false,
-    areas: []
+    areas: [],
+    all_questions: []
 }
 
 export type GameAction =
+    // list of possible actions for the game
   | { type: "START" }
   | { type: "NEXT_QUESTION" }
   | { type: "SET_PIN"; pin: { longitude: number; latitude: number } }
@@ -52,6 +54,7 @@ export type GameAction =
   | { type: "DISMISS_RESULTS" }
   | { type: "RESET" }
   | { type: "LOAD_AREAS"; areas: Area[]; targets: Area[] }
+  | { type: "LOAD_QUESTIONS"; questions: Question[] }
 
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -62,10 +65,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "START":
       return {
         ...initialGameState,
+        all_questions: state.all_questions,
         started: true,
-        question: Questions[0],
+        question: state.all_questions[0],
         questionIndex: 0,
-        timeLeft: Questions[0].time_limit,
+        timeLeft: state.all_questions[0].time_limit,
       }
 
     case "SET_PIN":
@@ -91,10 +95,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, timeUp: true,
         locked: true,
         showStory: true,
-
        }
 
     case "LOCK_IN":
+    // locked in - need to calc the score, show results and story UI elements, update total score
       return {
         ...state,
         locked: true,
@@ -107,10 +111,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "NEXT_QUESTION":
       const nextIndex = state.questionIndex + 1
-      if (nextIndex >= Questions.length) {
+      // If there are no more questions, show the summary screen
+      if (nextIndex >= state.all_questions.length) {
         return { ...state, showSummary: true }
       } else {
-        const nextQuestion = Questions[nextIndex]
+        // Otherwise, load the next question and reset the state for the new question
+        const nextQuestion = state.all_questions[nextIndex]
         return {
           ...state,
           questionIndex: nextIndex,
@@ -128,6 +134,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "LOAD_AREAS":
       return { ...state, areas: action.areas, targets: action.targets }
+
+    case "LOAD_QUESTIONS":
+        return { ...state, all_questions: action.questions }
 
     default:
       return state

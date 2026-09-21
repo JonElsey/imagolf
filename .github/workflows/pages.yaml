@@ -1,0 +1,57 @@
+name: gh pages build/deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+
+    - uses: actions/checkout@v7
+    - name: setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20
+
+    - name: install root dependencies
+      run: npm install
+
+    - name: install client dependencies
+      run: npm install --prefix apps/client
+
+    - name: build
+      env:
+        GITHUB_PAGES: true
+      run: npm run build --if-present
+      working-directory: apps/client
+
+    - name: upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: apps/client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: deploy
+      id: deployment
+      uses: actions/deploy-pages@v4
+    

@@ -6,13 +6,14 @@ import "maplibre-gl/dist/maplibre-gl.css"
 import "./map/maplibre"
 import { LineBetweenPins, UKMap } from "./map/map"
 import { haversineDistance, calculateScore } from "./game/scoring"
-import { Questions } from "./game/question"
+import { questionSchema } from "./game/question"
 import { gameReducer, initialGameState } from "./game/state"
 import TimerDisplay from "./components/timer"
 import ResultsPanel from "./components/results"
 import { MenuDrawer } from "./components/menu"
 import { HelpOverlay, ScoringOverlay } from "./components/menu-content"
 import type { Area } from "./game/types"
+import { parse as parseYaml } from "yaml"
 
 
 function App() { 
@@ -20,7 +21,7 @@ function App() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const { pin, targetPin, locked, result, targets, question, questionIndex,
         started, totalScore, showSummary, timeLeft, timeUp, showStory, 
-        showResults, areas } = state
+        showResults, areas, all_questions } = state
 
   // UI hooks
   const [menuOpen, setMenuOpen] = useState(false); // whether the menu is open
@@ -53,6 +54,7 @@ function handleLockIn() {
 
   let nearestDistance = Infinity
   let nearestTarget: Area | null = null
+  // go through each target, if closer to the pin set nearest
   for (const target of targets) {
     const targetDistance = haversineDistance(
       { lat: target.centroid_lat, lon: target.centroid_lon },
@@ -65,6 +67,7 @@ function handleLockIn() {
   }
   const score = calculateScore(nearestDistance)
   if (!nearestTarget) return
+  // dispatch the LOCK_IN action with the result and target pin
   dispatch({
     type: "LOCK_IN",
     result: { score, distance: nearestDistance, nearestTarget },
@@ -80,13 +83,37 @@ function handleLockIn() {
     dispatch({ type: "RESET" });
   }
 
+  // load in the questions from yaml and validate against schema
+  useEffect(() => {
+    async function getQuestions() {
+        try {
+          const manifestRes = await fetch("/questions/all-questions.yaml")
+          const manifestText = await manifestRes.text()
+          const filenames = parseYaml(manifestText)
+          console.log("Filenames:", filenames)
+
+          const questions = await Promise.all(
+            filenames.map(async (file: string) => {
+              const res = await fetch(`/questions/${file}`)
+              const text = await res.text()
+              return questionSchema.parse(parseYaml(text))
+            })
+          )
+          console.log("Questions loaded:", questions)
+          dispatch({ type: "LOAD_QUESTIONS", questions })
+        } catch (err) {
+          console.error("Failed to load questions:", err)
+        }
+      }
+    getQuestions()
+  }, [])
+
   // load the areas data from the JSON file when the question changes
   useEffect(() => {
     if (!question) return; // if no question, do nothing
     fetch(question.file)
       .then(res => res.json())
       .then(data => {
-        dispatch({ type: "LOAD_AREAS", areas: data, targets: [] });
         console.log("Loaded areas data for question", question.question, data[0])
         const sortedAreas = [...data].sort((a: any, b: any) => {
           if (question.statistic === "max") {
@@ -199,7 +226,7 @@ function handleLockIn() {
       {showSummary && (
         <div className="panel panel-summary">
           <p>Game over.</p>
-          <p>Final score: {totalScore}/{Questions.length * 1000}</p>
+          <p>Final score: {totalScore}/{all_questions.length * 1000}</p>
           <p>Restart by pressing the Reset button.</p>
         </div>
       )}
@@ -234,7 +261,7 @@ function handleLockIn() {
       <div className="bar">
       {/* Buttons go here */}
         {/* Show summary button - only visible at the end of the game */}
-        {locked && !timeUp && questionIndex === Questions.length - 1 && !showSummary && (
+        {locked && !timeUp && questionIndex === all_questions.length - 1 && !showSummary && (
           <button
           onClick={handleShowSummary}
           className="button button-summary"
@@ -245,7 +272,7 @@ function handleLockIn() {
         }
 
         {/* Next question button */}
-        {locked && !timeUp && questionIndex < Questions.length - 1 && (
+        {locked && !timeUp && questionIndex < all_questions.length - 1 && (
           <button 
           onClick={handleNextQuestion}
           className="button button-progress"

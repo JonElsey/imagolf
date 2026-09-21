@@ -14,7 +14,9 @@
     "pmtiles": "^4.5.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-map-gl": "^8.1.3"
+    "react-map-gl": "^8.1.3",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
