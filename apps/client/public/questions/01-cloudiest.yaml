@@ -1,0 +1,11 @@
+question: Where is the LSOA most likely to be cloudy according to SPF?
+file: data/areas.json
+variable: cloud_probability
+variable_label: Cloud probability (%)
+statistic: max
+top_n: 1
+time_limit: 5
+story: |
+  SPF is based on Sentinel-2; a satellite which takes images across the UK several times a day. These images are combined together and processed to estimate cloudiness. While we are limited to the times when Sentinel-2 is overhead, we get enough images per day to get a reasonable estimate!
+
+  As you can see from the map, the cloudiest parts of the UK tend to be in the North West, specifically Scotland and Northern Ireland; mostly due to weather systems coming in from the East Atlantic, and the orography of these areas.

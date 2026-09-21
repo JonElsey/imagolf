@@ -1,0 +1,13 @@
+question: Where is the LSOA least likely to be cloudy according to SPF?
+file: data/areas.json
+variable: cloud_probability
+variable_label: Cloud probability (%)
+statistic: min
+top_n: 1
+time_limit: 5
+story: |
+  SPF doesn't rely on the images on their own; there is processing that determines whether a pixel is cloudy or not, and processing to mitigate the effects of reflective surfaces in the images - these show up as clouds in the images, but aren't *actually* clouds!
+
+  This mostly affects urban areas like London, where there are a lot of buildings with white roofs. London is actually one of the least cloudy areas in the UK!
+
+  Some areas get more acquisitions than others, so they have more samples => better estimate of the mean cloudiness. We apply a quantile mapping correction to account for biases in acquisition counts across the UK, ensuring that areas with fewer acquisitions get more representative values.
