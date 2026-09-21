@@ -110,7 +110,7 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
         <Source
             id="lsoa-boundaries"
             type="vector"
-            url={"pmtiles://" + window.location.origin + "/data/lsoa.pmtiles"}
+            url={"pmtiles://" + window.location.origin + import.meta.env.BASE_URL + "data/lsoa.pmtiles"}            
             promoteId="data_zone_code"
         >
             {/* Outlines - always visible. z-order to make them below place names, town is the lowest place name type */}
