@@ -4,5 +4,5 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: process.env.GITHUB_PAGES ? '/summit-game/' : '/',
+  base: process.env.GITHUB_PAGES ? '/imagolf/' : '/',
 })
