@@ -4,7 +4,7 @@ variable: num_acquisitions
 variable_label: Number of acquisitions
 statistic: max
 top_n: 2000
-time_limit: 5
+time_limit: 60
 story: |
   The number of acquisitions is a measure of how many times the area has been imaged by satellites. This is important because it affects the quality of the data we can use to estimate cloudiness.
 

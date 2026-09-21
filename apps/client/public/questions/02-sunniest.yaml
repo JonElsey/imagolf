@@ -4,7 +4,7 @@ variable: cloud_probability
 variable_label: Cloud probability (%)
 statistic: min
 top_n: 1
-time_limit: 5
+time_limit: 60
 story: |
   SPF doesn't rely on the images on their own; there is processing that determines whether a pixel is cloudy or not, and processing to mitigate the effects of reflective surfaces in the images - these show up as clouds in the images, but aren't *actually* clouds!
 
