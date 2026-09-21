@@ -60,7 +60,7 @@ export type GameAction =
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "RESET":
-      return initialGameState
+      return { ...initialGameState, all_questions: state.all_questions }
 
     case "START":
       return {
