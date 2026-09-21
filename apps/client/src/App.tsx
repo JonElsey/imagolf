@@ -94,7 +94,7 @@ function handleLockIn() {
 
           const questions = await Promise.all(
             filenames.map(async (file: string) => {
-              const res = await fetch(`/questions/${file}`)
+              const res = await fetch(`${import.meta.env.BASE_URL}questions/${file}`)
               const text = await res.text()
               return questionSchema.parse(parseYaml(text))
             })
@@ -111,7 +111,7 @@ function handleLockIn() {
   // load the areas data from the JSON file when the question changes
   useEffect(() => {
     if (!question) return; // if no question, do nothing
-    fetch(question.file)
+    fetch(`${import.meta.env.BASE_URL}${question.file}`)
       .then(res => res.json())
       .then(data => {
         console.log("Loaded areas data for question", question.question, data[0])
