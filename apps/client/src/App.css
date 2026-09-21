@@ -95,7 +95,7 @@
   background-color: var(--color-navy);
   color: white;
   font-family: var(--font-main);
-  z-index: 20;
+  z-index: 40;
 }
 
 .header h1 {

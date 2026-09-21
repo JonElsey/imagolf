@@ -216,12 +216,6 @@ function handleLockIn() {
                 <button className="close-button" onClick={() => dispatch({ type: "DISMISS_STORY" })}>×</button>
               </div>
             )}
-            {!timeUp && questionIndex < all_questions.length - 1 && (
-              <button onClick={handleNextQuestion} className="button button-progress">Next question</button>
-            )}
-            {!timeUp && questionIndex === all_questions.length - 1 && (
-              <button onClick={handleShowSummary} className="button button-summary">Show summary</button>
-            )}
           </div>
         </div>
       )}
@@ -265,6 +259,13 @@ function handleLockIn() {
       {/* Controls */}
       <div className="bar">
       {/* Buttons go here */}
+        {/* Next question / Show summary buttons */}
+        {locked && !timeUp && !showSummary && questionIndex < all_questions.length - 1 && (
+          <button onClick={handleNextQuestion} className="button button-progress">Next question</button>
+        )}
+        {locked && !timeUp && !showSummary && questionIndex === all_questions.length - 1 && (
+          <button onClick={handleShowSummary} className="button button-summary">Show summary</button>
+        )}
         {/* Start button */}
         {(!started &&
           <button 
