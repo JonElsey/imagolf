@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import "maplibre-gl/dist/maplibre-gl.css"
 import "./maplibre"
 import "./map.css"
@@ -71,6 +71,7 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
 
     const [hoveredCode, setHoveredCode] = useState<string | null>(null)
     const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null)
+    const hoveredCodeRef = useRef<string | null>(null)
     return (
     <>
     <Map 
@@ -83,9 +84,9 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
         onMouseMove={(e) => {
             const feature = e.features?.[0]
             const map = e.target
-            if (hoveredCode) {
+            if (hoveredCodeRef.current) {
                 map.setFeatureState(
-                    { source: "lsoa-boundaries", sourceLayer: "lsoa", id: hoveredCode },
+                    { source: "lsoa-boundaries", sourceLayer: "lsoa", id: hoveredCodeRef.current },
                     { hover: false }
                 )
             }
@@ -95,14 +96,23 @@ export function UKMap({locked, setPin, areas, variable, variableLabel, children}
                     { source: "lsoa-boundaries", sourceLayer: "lsoa", id: code },
                     { hover: true }
                 )
+                hoveredCodeRef.current = code
                 setHoveredCode(code)
                 setCursorPos(e.point)
             } else {
+                hoveredCodeRef.current = null
                 setHoveredCode(null)
                 setCursorPos(null)
             }
         }}
-        onMouseLeave={() => {
+        onMouseLeave={(e) => {
+            if (hoveredCodeRef.current) {
+                e.target.setFeatureState(
+                    { source: "lsoa-boundaries", sourceLayer: "lsoa", id: hoveredCodeRef.current },
+                    { hover: false }
+                )
+                hoveredCodeRef.current = null
+            }
             setHoveredCode(null)
             setCursorPos(null)
         }}
