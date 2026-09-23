@@ -160,7 +160,7 @@ function handleLockIn() {
         {/* Logo and title */}
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
         <img src={`${import.meta.env.BASE_URL}Imago-logo.png`} alt="Imago logo" className="header-logo" />        </div>
-        <h1>Imagolf - A map guessing game</h1>
+        <h1><center>Imagolf - A map guessing game</center></h1>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
           <p>Score: {totalScore}</p>
           <button className="button button-menu-toplevel" onClick={() => setMenuOpen(!menuOpen)}>☰</button>

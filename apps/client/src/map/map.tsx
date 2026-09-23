@@ -212,7 +212,7 @@ export function LineBetweenPins({pin, result}: {pin: { longitude: number, latitu
           <Layer 
           type="line"
           paint={{
-            "line-color": "#03CEA3",  // imago teal
+            "line-color": "#FF8F42",  // imago orange
             "line-width": 2,
             "line-dasharray": [4, 4],
           }}
